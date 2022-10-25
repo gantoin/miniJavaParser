@@ -1,0 +1,45 @@
+
+class MiniJavaTokens {
+
+    public static void main(String[] a) {
+        System.out.println(new BS().Start(20));
+    }
+}
+
+/**
+ * This class contains an array of integers and
+ * methods to initialize, print and search the array
+ * using Binary Search
+ */
+class MJT {
+    // Schlüsselwörter
+    if class public static void main String extends return int boolean
+    else while true false this new
+    
+    // feste Methoden
+    System.out.println length 
+    
+    // Zahlen 
+    1 20 354 2840938
+    
+    // Bezeichner
+    BS i num do
+    int size;       // Kombination mit anderen Tokens
+    
+    // Trennsymbole
+    { } ( ) [ ] ; , // mit Leerezichen getrennt
+    {}()[];,        // ohne Trennung
+    int[] number;   // Kombination mit anderen Tokens
+    
+    // Operatoren
+    == && < + - * . ! = // mit Leerezichen getrennt
+    a==b              // ohne Trennung
+    a&&b
+    a<b
+    a+b
+    a-b
+    a*b
+    a.b
+    a!b
+    a=b
+}

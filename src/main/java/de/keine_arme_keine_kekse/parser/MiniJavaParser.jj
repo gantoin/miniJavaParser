@@ -1,0 +1,245 @@
+options {
+  STATIC = false;
+  JAVA_UNICODE_ESCAPE = true;
+  DEBUG_PARSER = false;
+  OUTPUT_DIRECTORY = "./src/parser";
+}
+
+/******************************************************************************/
+/* PARSER CODE                                                                */
+/******************************************************************************/
+PARSER_BEGIN(MiniJavaParser)
+    package parser;
+
+    import java.io.*;
+
+    import syntaxtree.*;
+    import visitor.*;
+    import visitor.symboltable.SymbolTable;
+
+    public class MiniJavaParser {
+
+        private static final String baseDir = "./samples/";
+        private static final String sourceDir = baseDir + "src/";
+        private static final String outDir = baseDir + "out/";
+
+        private static PrintWriter writer;
+        private static String sample;
+
+        public static void main(String[] args) {
+
+            int blatt = 1;
+            sample =
+//                    "_TEST_Blatt01";
+//                    "_TEST_Blatt02";
+//                    "_TEST_Blatt03";
+                    "Factorial";
+//                    "BubbleSort";
+//                    "BinarySearch";
+//                    "BinaryTree";
+//                    "LinearSearch";
+//                    "LinkedList";
+//                    "QuickSort";
+//                    "TreeVisitor";
+
+            try {
+                FileInputStream in = new FileInputStream(sourceDir + sample + ".mjava");
+
+                MiniJavaParser parser = new MiniJavaParser(in);
+
+                Program root = null;
+                SymbolTable symbolTable = null;
+
+                if (blatt == 1) {
+                    readTokens(parser);  // exercise 1 only
+                }
+                if (blatt >= 2) {
+                    root = parse(parser); // from exercise 2 on
+                }
+
+                in.close(); // close infile after parsing
+
+                if (blatt >= 3) {
+                    symbolTable = checkTypes(root); // from exercise 3 on
+                }
+
+                if (blatt == 4) {
+                    generateJasminCode(root, symbolTable); // from exercise 4 on
+                }
+
+            } catch (IOException e) {
+                System.out.println("File Error : \n" + e);
+            }
+        }
+
+    /**
+     * Displays all tokens that are read by the parser from the given input
+     * @param parser
+     */
+    public static void readTokens(MiniJavaParser parser) {
+
+        writer = newWriter(sample, "tok");
+
+        Token token = parser.getNextToken();
+        while (token.kind != MiniJavaParserConstants.EOF) {
+            token = parser.getNextToken();
+            writer.println("Image: " + token.image + " ".repeat(32 - token.image.length())
+                                + "Tag: " + token.kind + ", "
+                                + "[" + token.beginLine + ":" + token.beginColumn
+                                + "-" + token.endLine + ":" + token.endColumn + "]");
+        }
+        writer.close();
+
+        System.out.println("[DONE] Scanning Minijava program");
+    }
+
+    /**
+     * Parses the input and generates the abstract syntax tree
+     * @param parser
+     * @return root AST
+     */
+    public static Program parse(MiniJavaParser parser) {
+        Program root = null;
+
+        try {
+            root = parser.Program();
+
+            writer = newWriter(sample, "ast");
+            writer.println("ABSTRAKTER SYNTAXBAUM:\n----------------------");
+            root.accept(new TreePrintVisitor(writer)); // Pretty print of AST
+            writer.close();
+
+            writer = newWriter(sample, "mjava-ast");
+            root.accept(new PrettyPrintVisitor(writer)); // Pretty print of program
+            writer.close();
+
+            System.out.println("[DONE] Parsing Minijava program");
+
+        } catch (TokenMgrError e) {
+            System.out.println("Lexical Error : "+ e.toString());
+            System.exit(1);
+
+        } catch (ParseException e) {
+            System.out.println("Parse Error : \n"+ e.toString());
+            System.out.println("[ERROR] Parsing Minijava program");
+            System.exit(1);
+        }
+
+        return root;
+    }
+
+    /**
+     * Performs type checking on the abstract syntax tree
+     *
+     * @param root of AST
+     * @param symbolTable
+     */
+    public static SymbolTable checkTypes(Program root) {
+
+        SymbolTableVisitor symbolTableVisitor = new SymbolTableVisitor();
+        root.accept(symbolTableVisitor);
+        SymbolTable symbolTable = symbolTableVisitor.getSymbolTable();
+
+        System.out.println("[DONE] Building symbol table");
+
+        try {
+            TypeVisitor typeVisitor = new TypeVisitor(symbolTable);
+            root.accept(typeVisitor);
+
+            writer = newWriter(sample,"ast");
+            writer.println("SYMBOLTABELLE:\n--------------");
+            writer.println(symbolTable); // Pretty print of symbol table
+            writer.println("ABSTRAKTER SYNTAXBAUM:\n----------------------");
+            root.accept(new TreePrintVisitor(writer)); // Pretty print of typed AST
+            writer.close();
+
+            System.out.println("[DONE] Type checking");
+
+        } catch (SemanticException e) {
+            System.out.println("Type error : " + e.toString());
+            System.out.println("[ERROR] Type checking");
+            System.exit(1);
+        }
+
+        return symbolTable;
+    }
+
+    /**
+     * Generates the Jasmin code of the given input program
+     * @param root root of the abstract syntax tree
+     * @return the synbol table
+     */
+    public static void generateJasminCode(Program root, SymbolTable symbolTable) {
+
+        JasminVisitor jasminVisitor = new JasminVisitor(outDir, symbolTable);
+        //jasminVisitor.setVerbose(); // Prints Jasmin code to console
+        root.accept(jasminVisitor);
+
+        System.out.println("[DONE] Generating Jasmin code");
+    }
+
+    /**
+     * Generates a new writer for given classname and suffix
+     * @param prefix root of the abstract syntax tree
+     * @param suffix of filename
+     * @return the new printer
+     */
+    private static PrintWriter newWriter(String prefix, String suffix) {
+
+        PrintWriter newWriter = null;
+
+        try {
+            String fullFilename = outDir + prefix + "." + suffix;
+            newWriter = new PrintWriter(new FileOutputStream(fullFilename));
+
+        } catch (FileNotFoundException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return newWriter;
+    }
+}
+PARSER_END(MiniJavaParser)
+
+
+/*******************************************************************************
+ * LEXICAL SPECIFICATION
+ **************************************************************************** */
+
+/* =============================================================================
+ * Definieren Sie hier alle zu ignorierenden Tokens                        
+ * ========================================================================== */
+
+SKIP : {
+    /* WHITE SPACES */
+    < WHITESPACE: (" " | "\n") >  // DIESE DEFINITION ERG�NZEN !!!
+
+    /* COMMENTS */
+}
+
+
+/* =============================================================================
+ * Definieren Sie hier alle MiniJava-Tokens. 
+/*============================================================================*/
+
+TOKEN : {
+    < LETTER: ~[] >  // DIESE ZEILE ENTFERNEN !!!
+
+    /* RESERVED WORDS */
+    
+    /* INTEGERS */
+
+    /* IDENTIFIERS */
+
+    /* SEPARATORS */
+
+    /* OPERATORS */
+}
+
+/*******************************************************************************
+ * SYNTACTICAL SPECIFICATION
+ **************************************************************************** */
+
+// Leere Regel bitte nicht entfernen. Sie ist n�tig, damit im Parser die Methode
+// Program() definiert ist, daher NICHT ENTFERNEN
+Program Program() : {}{ ( "" )* { return null; } }

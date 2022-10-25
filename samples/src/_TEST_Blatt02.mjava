@@ -1,0 +1,47 @@
+
+class Blatt02 {
+
+    public static void main(String[] a) {
+        System.out.println(new B02().test(0));
+    }
+}
+
+class B02 {
+
+    public int test(int notUsed) {
+        
+        int x;
+        int nt;
+        int[] a;
+
+        x = 1;
+        x = 1 - 2 + 3;
+        x = 1 + 2 * 3 - 4;
+        
+        if (x < 3 && 5 < x) {
+            nt = 0;
+        } else {
+            nt = 1;
+        }
+        
+        if (x < 3 && (3 + 4 < 2 + 5 * a.length)) {
+            nt = 0;
+        } else {
+            nt = 1;
+        }
+
+        while (x < 1 - 2 * 3 && 1 + 2 * 3 < x) {
+            nt = 0;
+        } 
+
+        while (!(1 < a.length) && !(a.length < l) && 2 < 3 && !(3 < 4)) {
+            nt = 0;
+        } 
+
+        while (true) {
+            a[1 - 2 * 3] = 1 + 2 * 3 + x;
+        } 
+
+        return 0;
+    }
+}
