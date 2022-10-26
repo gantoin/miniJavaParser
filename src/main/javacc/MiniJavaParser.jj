@@ -24,7 +24,7 @@ PARSER_END(MiniJavaParser)
  **************************************************************************** */
 
 /* =============================================================================
- * Definieren Sie hier alle zu ignorierenden Tokens                        
+ * Definieren Sie hier alle zu ignorierenden Tokens
  * ========================================================================== */
 
 SKIP : {
@@ -36,7 +36,7 @@ SKIP : {
 
 
 /* =============================================================================
- * Definieren Sie hier alle MiniJava-Tokens. 
+ * Definieren Sie hier alle MiniJava-Tokens.
 /*============================================================================*/
 TOKEN : {
     // < LETTER: ~[] >  // DIESE ZEILE ENTFERNEN !!!
@@ -62,11 +62,12 @@ TOKEN : {
     | < MAIN : "main" >
 
     | < STRING : "String" >
-    
+
     /* INTEGERS */
+    | < INTEGER_LITERAL : ["0"-"9"] >
 
     /* IDENTIFIERS */
-    | < IDENTIFIER : "[a-Z][a-Z0-9*]" >
+    | < IDENTIFIER_LITERAL : "[a-Z][a-Z0-9*]" >
 
     /* SEPARATORS */
     | < L_PAREN : "(" >
@@ -86,7 +87,7 @@ TOKEN : {
 Identifier Identifier() : {
     Token lexem;
 }{
-    lexem=<IDENTIFIER>
+    lexem=<IDENTIFIER_LITERAL>
     { return new Identifier(lexem.toString()); }
 }
 
@@ -139,7 +140,7 @@ void VarDecl(VarDeclList list) : {
 Typing Typing() : {
     Token lexem;
 } {
-    lexem=<INT_ARRAY>|lexem=<BOOLEAN>|lexem=<INT>|lexem=<IDENTIFIER>
+    lexem=<INT_ARRAY>|lexem=<BOOLEAN>|lexem=<INT>|lexem=<IDENTIFIER_LITERAL>
     {
         String lexemAsString = lexem.toString();
         if(lexemAsString.equals("int")) {
@@ -196,12 +197,290 @@ void Formal(FormalList list) : {
     }
 }
 
-Exp Expression() : {
-
+ExpList ExpList() : {
+    ExpList list = new ExpList();
 } {
-    "NO match"
+    ExpressionInList(list) ("," ExpressionInList(list))*
     {
-        return null;
+        return list;
+    }
+}
+
+Exp ExpressionInList(ExpList list) : {
+    Exp exp;
+}{
+    exp=Expression()
+    {
+        list.addElement(exp);
+        return exp;
+    }
+}
+
+Exp ExpressionR(Exp first) : {
+  Exp second;
+
+  Exp array = null;
+  Exp index = null;
+
+  Exp object = null;
+  Identifier methodId = null;
+  ExpList expList = null;
+
+  Token intLexem = null;
+
+  Token idLexem = null;
+  Identifier id = null;
+
+  Exp size = null;
+
+  Exp exp = null;
+}{
+    "&&" second=Expression()
+    {
+        return new And(first, second);
+    }
+    |
+    "<" second=Expression()
+    {
+        return new LessThan(first, second);
+    }
+    |
+    "+" second=Expression()
+    {
+        return new Plus(first, second);
+    }
+    |
+    "-" second=Expression()
+    {
+        return new Minus(first, second);
+    }
+    |
+    "*" second=Expression()
+    {
+        return new Times(first, second);
+    }
+    |
+    "[" second=Expression() "]"
+    {
+        return new ArrayLookup(first, second);
+    }
+    |
+    exp=DotExpression(first)
+    {
+        return exp;
+    }
+    |
+    intLexem=<INTEGER_LITERAL>
+    {
+        return new IntegerLiteral(Integer.parseInt(intLexem.toString()));
+    }
+    |
+    "true"
+    {
+        return new True();
+    }
+    |
+    "false"
+    {
+        return new False();
+    }
+    |
+    idLexem=<IDENTIFIER_LITERAL>
+    {
+        return new IdentifierExp(idLexem.toString());
+    }
+    |
+    "this"
+    {
+        return new This();
+    }
+    |
+    exp=NewExpression()
+    {
+        return exp;
+    }
+    |
+    "!" exp=Expression()
+    {
+        return new Not(exp);
+    }
+    |
+    "(" exp=Expression() ")"
+    {
+        return exp;
+    }
+    |
+    ""
+    {
+        return first;
+    }
+}
+
+Exp NewExpression() : {
+    Exp exp;
+    Identifier id;
+}{
+    // TODO: Why is this needed? Without it javacc generates invalid code.
+    LOOKAHEAD(2)
+    "new" "int" "[" exp=Expression() "]"
+    {
+        return new NewArray(exp);
+    }
+    |
+    "new" id=Identifier() "()"
+    {
+        return new NewObject(id);
+    }
+}
+
+Exp DotExpression(Exp first) : {
+    Identifier methodId = null;
+    ExpList expList = null;
+}{
+    // TODO: Why is this needed? Without it javacc generates invalid code.
+    LOOKAHEAD(2)
+    "." "length"
+    {
+        return new ArrayLength(first);
+    }
+    |
+    "." methodId=Identifier() "(" (expList=ExpList())? ")"
+    {
+        return new Call(first, methodId, expList);
+    }
+}
+
+Exp Expression() : {
+    Exp first = null;
+    Exp rest = null;
+}{
+    first=ExpressionR(null) rest=ExpressionR(first)
+    {
+        return rest;
+    }
+}
+
+Statement Statement() : {
+    Statement statement = null;
+}{
+    LOOKAHEAD(2)
+    statement=Block()
+    {
+        return statement;
+    }
+    |
+    statement=If()
+    {
+        return statement;
+    }
+    |
+    statement=While()
+    {
+        return statement;
+    }
+    |
+    statement=Print()
+    {
+        return statement;
+    }
+    |
+    statement=AssignStatement()
+    {
+        return statement;
+    }
+}
+
+Block Block() : {
+  StatementList statementList = null;
+}{
+    "{" statementList=StatementList() "}"
+    {
+        return new Block(statementList);
+    }
+}
+
+StatementList StatementList() : {
+    StatementList list = new StatementList();
+}{
+    (StatementInList(list))*
+    {
+        return list;
+    }
+}
+
+void StatementInList(StatementList list) : {
+    Statement statement;
+}{
+    statement=Statement()
+    {
+        list.addElement(statement);
+    }
+}
+
+If If() : {
+    Exp exp = null;
+    Statement thenStatement = null;
+    Statement elseStatement = null;
+}{
+    "if" "(" exp=Expression() ")" thenStatement=Statement() "else" elseStatement=Statement()
+    {
+        return new If(exp, thenStatement, elseStatement);
+    }
+}
+
+While While() : {
+    Exp exp = null;
+    Statement statement = null;
+}{
+    "while" "(" exp=Expression() ")" statement=Statement()
+    {
+        return new While(exp, statement);
+    }
+}
+
+Print Print() : {
+    Exp exp = null;
+}{
+    "System.out.println" "(" exp=Expression() ")" ";"
+    {
+        return new Print(exp);
+    }
+}
+
+Statement AssignStatement() : {
+    Statement statement = null;
+}{
+    // TODO: Why is this needed? Without it javacc generates invalid code.
+    LOOKAHEAD(2)
+    statement=Assign()
+    {
+        return statement;
+    }
+    |
+    statement=ArrayAssign()
+    {
+        return statement;
+    }
+}
+
+Assign Assign() : {
+    Identifier id = null;
+    Exp exp = null;
+}{
+    id=Identifier() "=" exp=Expression() ";"
+    {
+        return new Assign(id, exp);
+    }
+}
+
+ArrayAssign ArrayAssign() : {
+    Identifier id = null;
+    Exp index = null;
+    Exp exp = null;
+}{
+    id=Identifier() "[" index=Expression() "]" "=" exp=Expression() ";"
+    {
+        return new ArrayAssign(id, index, exp);
     }
 }
 
@@ -214,30 +493,13 @@ ClassDeclList ClassDeclList() : {
     }
 }
 
-StatementList StatementList() : {
-    Statement statement;
-    StatementList list = new StatementList();
-} {
-    (statement=Statement() {list.addElement(statement);})*
-    {
-        return list;
-    }
-}
-
-Statement Statement() : {} {
-    "THIS"
-    {
-        return null;
-    }
-}
-
 Program Program() : {
     MainClass mainClass;
-    ClassDeclList classes; 
+    ClassDeclList classes;
 }{
     mainClass=MainClass()
     classes=ClassDeclList()
-    { 
-        return new Program(mainClass, classes); 
+    {
+        return new Program(mainClass, classes);
     }
 }
