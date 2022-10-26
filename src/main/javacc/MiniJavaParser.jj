@@ -95,10 +95,46 @@ MainClass MainClass() : {
     }
 }
 
-ClassDeclList ClassDeclList() : {
+void ClassDeclSimple(ClassDeclList list) : {
+    Identifier classId;
+    Identifier parentId=null;
+    VarDeclList varList;
+    MethodDeclList methodList;
 }{
+    "class" (classId=Identifier()) ("extends" parentId=Identifier())? "{" varList=VarDeclList() methodList=MethodDeclList() "}"
     {
-        return new ClassDeclList(); 
+        if(parentId != null) {
+        list.addElement(new ClassDeclExtends(classId, parentId, varList, methodList));
+        return;
+        }
+        list.addElement(new ClassDeclSimple(classId,varList,methodList));
+    }
+}
+
+VarDeclList VarDeclList(): {
+
+}{
+    "THIS"
+    {
+        return null;
+    }
+}
+
+MethodDeclList MethodDeclList(): {
+
+} {
+    "THIS"
+    {
+        return null;
+    }
+}
+
+ClassDeclList ClassDeclList() : {
+    ClassDeclList list = new ClassDeclList();
+}{
+    (ClassDeclSimple(list))*
+    {
+        return list;
     }
 }
 
