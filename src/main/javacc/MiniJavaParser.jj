@@ -80,18 +80,26 @@ TOKEN : {
  * SYNTACTICAL SPECIFICATION
  **************************************************************************** */
 
+Identifier Identifier() : {}{
+    "THIS" { return null; }
+}
+
 MainClass MainClass() : {
-    String id;
+    Identifier classId;
+    Identifier formalId;
+    Statement statement;
 }{
-    "class" Id "{" "public" "static" "void" "main" "(" "String" "[" "]" Id ")" "{" Statement "}" "}"
+    "class" classId=Identifier() "{" "public" "static" "void" "main" "(" "String" "[" "]" formalId=Identifier() ")" "{" statement=Statement() "}" "}"
+    {
+        return new MainClass(classId, formalId, statement);
+    }
 }
 
-ClassDeclList ClassDeclList() : {}{
-    "THIS" { return null; }
-}
-
-Id Id() : {}{
-    "THIS" { return null; }
+ClassDeclList ClassDeclList() : {
+}{
+    {
+        return new ClassDeclList(); 
+    }
 }
 
 Statement Statement() : {}{
