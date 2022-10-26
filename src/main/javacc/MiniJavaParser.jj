@@ -83,8 +83,11 @@ TOKEN : {
  * SYNTACTICAL SPECIFICATION
  **************************************************************************** */
 
-Identifier Identifier() : {}{
-    "THIS" { return null; }
+Identifier Identifier() : {
+    Token lexem;
+}{
+    lexem=<IDENTIFIER>
+    { return new Identifier(lexem.toString()); }
 }
 
 MainClass MainClass() : {
@@ -152,9 +155,51 @@ Typing Typing() : {
 }
 
 MethodDeclList MethodDeclList(): {
+    MethodDeclList list = new MethodDeclList();
+} {
+    (MethodDecl(list))*
+    {
+        return list;
+    }
+}
+
+void MethodDecl(MethodDeclList list): {
+    Typing returnType;
+    Identifier methodName;
+    FormalList formalList = new FormalList();
+    VarDeclList varDeclList;
+    StatementList statementList;
+    Exp returnExpression;
+} {
+    "public" returnType=Typing() methodName=Identifier() "(" (formalList=FormalList())? ")" "{" varDeclList=VarDeclList() statementList=StatementList()  "return" returnExpression=Expression() "}"
+    {
+        list.addElement(new MethodDecl(returnType, methodName, formalList, varDeclList, statementList, returnExpression));
+    }
+}
+
+FormalList FormalList() : {
+    FormalList list = new FormalList();
+} {
+    Formal(list) ("," Formal(list))*
+    {
+        return list;
+    }
+}
+
+void Formal(FormalList list) : {
+    Typing type;
+    Identifier name;
+} {
+    type=Typing() name=Identifier()
+    {
+        list.addElement(new Formal(type, name));
+    }
+}
+
+Exp Expression() : {
 
 } {
-    "THIS"
+    "NO match"
     {
         return null;
     }
@@ -169,8 +214,21 @@ ClassDeclList ClassDeclList() : {
     }
 }
 
-Statement Statement() : {}{
-    "THIS" { return null; }
+StatementList StatementList() : {
+    Statement statement;
+    StatementList list = new StatementList();
+} {
+    (statement=Statement() {list.addElement(statement);})*
+    {
+        return list;
+    }
+}
+
+Statement Statement() : {} {
+    "THIS"
+    {
+        return null;
+    }
 }
 
 Program Program() : {
