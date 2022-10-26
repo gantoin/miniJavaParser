@@ -11,6 +11,7 @@ PARSER_BEGIN(MiniJavaParser)
     package de.keine_arme_keine_kekse.parser;
 
     import de.keine_arme_keine_kekse.syntaxtree.*;
+    import de.keine_arme_keine_kekse.visitor.symboltable.*;
 
     public class MiniJavaParser {
 
@@ -49,6 +50,7 @@ TOKEN : {
     | < EXTENDS : "extends" >
     | < RETURN : "return" >
     | < INT : "int" >
+    | < INT_ARRAY : "int[]" >
     | < BOOLEAN : "boolean" >
     | < IF : "if" >
     | < ELSE : "else" >
@@ -64,6 +66,7 @@ TOKEN : {
     /* INTEGERS */
 
     /* IDENTIFIERS */
+    | < IDENTIFIER : "[a-Z][a-Z0-9*]" >
 
     /* SEPARATORS */
     | < L_PAREN : "(" >
@@ -112,11 +115,39 @@ void ClassDeclSimple(ClassDeclList list) : {
 }
 
 VarDeclList VarDeclList(): {
-
+    VarDeclList list = new VarDeclList();
 }{
-    "THIS"
+    (VarDecl(list))*
     {
-        return null;
+        return list;
+    }
+}
+
+void VarDecl(VarDeclList list) : {
+    Typing type;
+    Identifier id;
+}{
+    type=Typing() id=Identifier()
+    {
+        list.addElement(new VarDecl(type, id));
+    }
+}
+
+Typing Typing() : {
+    Token lexem;
+} {
+    lexem=<INT_ARRAY>|lexem=<BOOLEAN>|lexem=<INT>|lexem=<IDENTIFIER>
+    {
+        String lexemAsString = lexem.toString();
+        if(lexemAsString.equals("int")) {
+            return new IntegerTyping();
+        } else if(lexemAsString.equals("intarray")) {
+            return new IntArrayTyping();
+        } else if(lexemAsString.equals("boolean")) {
+            return new BooleanTyping();
+        } else {
+            return new IdentifierTyping(lexemAsString);
+        }
     }
 }
 
