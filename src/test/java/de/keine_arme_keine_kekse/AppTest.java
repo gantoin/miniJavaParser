@@ -1,18 +1,28 @@
 package de.keine_arme_keine_kekse;
 
-import org.junit.jupiter.api.Test;
+import java.io.FileNotFoundException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-/**
- * Unit test for simple App.
- */
+import de.keine_arme_keine_kekse.parser.ParseException;
+
 class AppTest {
-    /**
-     * Rigorous Test.
-     */
-    @Test
-    void testApp() {
-        assertEquals(1, 1);
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "_TEST_Blatt01",
+            "_TEST_Blatt02",
+            "Factorial",
+            "BubbleSort",
+            "BinarySearch",
+            "BinaryTree",
+            "LinearSearch",
+            "LinkedList",
+            "QuickSort",
+            "TreeVisitor"
+    })
+    public void recognizesTokens(String sample) throws FileNotFoundException, ParseException {
+        App app = new App(sample);
+        app.parse();
     }
 }

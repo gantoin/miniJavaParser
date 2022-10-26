@@ -1,0 +1,110 @@
+options {
+  STATIC = false;
+  JAVA_UNICODE_ESCAPE = true;
+  DEBUG_PARSER = false;
+}
+
+/******************************************************************************/
+/* PARSER CODE                                                                */
+/******************************************************************************/
+PARSER_BEGIN(MiniJavaParser)
+    package de.keine_arme_keine_kekse.parser;
+
+    import de.keine_arme_keine_kekse.syntaxtree.*;
+
+    public class MiniJavaParser {
+
+}
+PARSER_END(MiniJavaParser)
+
+
+/*******************************************************************************
+ * LEXICAL SPECIFICATION
+ **************************************************************************** */
+
+/* =============================================================================
+ * Definieren Sie hier alle zu ignorierenden Tokens                        
+ * ========================================================================== */
+
+SKIP : {
+    /* WHITE SPACES */
+    < WHITESPACE: (" " | "\n") >  // DIESE DEFINITION ERGÄNZEN !!!
+
+    /* COMMENTS */
+}
+
+
+/* =============================================================================
+ * Definieren Sie hier alle MiniJava-Tokens. 
+/*============================================================================*/
+TOKEN : {
+    // < LETTER: ~[] >  // DIESE ZEILE ENTFERNEN !!!
+
+    /* RESERVED WORDS */
+
+      < CLASS : "class" >
+    | < PUBLIC : "public" >
+    | < STATIC : "static" >
+    | < VOID : "void" >
+    | < EXTENDS : "extends" >
+    | < RETURN : "return" >
+    | < INT : "int" >
+    | < BOOLEAN : "boolean" >
+    | < IF : "if" >
+    | < ELSE : "else" >
+    | < WHILE : "while" >
+    | < TRUE : "true" >
+    | < FALSE : "false" >
+    | < THIS : "this" >
+    | < NEW : "new" >
+    | < MAIN : "main" >
+
+    | < STRING : "String" >
+    
+    /* INTEGERS */
+
+    /* IDENTIFIERS */
+
+    /* SEPARATORS */
+    | < L_PAREN : "(" >
+    | < R_PAREN : ")" >
+    | < L_BRACE : "{" >
+    | < R_BRACE : "}" >
+    | < L_BRACKET : "[" >
+    | < R_BRACKET : "]" >
+
+    /* OPERATORS */
+}
+
+/*******************************************************************************
+ * SYNTACTICAL SPECIFICATION
+ **************************************************************************** */
+
+MainClass MainClass() : {
+    String id;
+}{
+    "class" Id "{" "public" "static" "void" "main" "(" "String" "[" "]" Id ")" "{" Statement "}" "}"
+}
+
+ClassDeclList ClassDeclList() : {}{
+    "THIS" { return null; }
+}
+
+Id Id() : {}{
+    "THIS" { return null; }
+}
+
+Statement Statement() : {}{
+    "THIS" { return null; }
+}
+
+Program Program() : {
+    MainClass mainClass;
+    ClassDeclList classes; 
+}{
+    mainClass=MainClass()
+    classes=ClassDeclList()
+    { 
+        return new Program(mainClass, classes); 
+    }
+}
