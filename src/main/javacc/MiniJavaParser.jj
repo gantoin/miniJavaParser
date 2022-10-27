@@ -222,7 +222,7 @@ ExpList ExpList() : {
     Exp exp;
     ExpList list = new ExpList();
 } {
-    (exp=Expression(){list.addElement(exp);} (<COMMA> Expression(){list.addElement(exp);}))*
+    (exp=Expression(){list.addElement(exp);} (<COMMA> exp=Expression(){list.addElement(exp);})*)
     {
         return list;
     }

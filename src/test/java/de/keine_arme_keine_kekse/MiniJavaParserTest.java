@@ -12,6 +12,7 @@ import de.keine_arme_keine_kekse.parser.ParseException;
 import de.keine_arme_keine_kekse.syntaxtree.And;
 import de.keine_arme_keine_kekse.syntaxtree.Call;
 import de.keine_arme_keine_kekse.syntaxtree.Exp;
+import de.keine_arme_keine_kekse.syntaxtree.ExpList;
 import de.keine_arme_keine_kekse.syntaxtree.False;
 import de.keine_arme_keine_kekse.syntaxtree.IdentifierExp;
 import de.keine_arme_keine_kekse.syntaxtree.IntegerLiteral;
@@ -177,6 +178,14 @@ public class MiniJavaParserTest {
         IdentifierExp identifier = (IdentifierExp) call.exp;
         assertEquals("test", identifier.getName());
         assertEquals("foo", call.methodId.getName());
+    }
+
+    @Test
+    public void parsesExpList() throws ParseException {
+        MiniJavaParser parser = parserFor("42, true, false");
+        ExpList result = parser.ExpList();
+
+        assertEquals(3, result.size());
     }
 
     private MiniJavaParser parserFor(String input) {
