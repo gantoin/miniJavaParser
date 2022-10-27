@@ -60,14 +60,17 @@ TOKEN : {
     | < THIS : "this" >
     | < NEW : "new" >
     | < MAIN : "main" >
+    | < LENGTH : "length" >
 
     | < STRING : "String" >
 
     /* INTEGERS */
-    | < DIGIT : ["0"-"9"] >
+    | < #DIGIT : ["0"-"9"] >
+    | < INTEGER_LITERAL : (<DIGIT>)+ >
 
     /* IDENTIFIERS */
-    | < IDENTIFIER_LITERAL : "[a-Z][a-Z0-9]*" >
+    | < #LETTER : ["a"-"z","A"-"Z"] >
+    | < IDENTIFIER_LITERAL : <LETTER>(<DIGIT>|<LETTER>)* >
 
     /* SEPARATORS */
     | < L_PAREN : "(" >
@@ -76,8 +79,18 @@ TOKEN : {
     | < R_BRACE : "}" >
     | < L_BRACKET : "[" >
     | < R_BRACKET : "]" >
+    | < SEMI : ";" >
+    | < COMMA : "," >
+    | < DOT : "." >
 
     /* OPERATORS */
+    | < PLUS : "+" >
+    | < MINUS : "-" >
+    | < TIMES : "*" >
+    | < DIV : "/" >
+    | < NOT : "!" >
+    | < AND : "&&" >
+    | < EQ : "=" >
 }
 
 /*******************************************************************************
@@ -94,7 +107,7 @@ Identifier Identifier() : {
 IntegerLiteral IntegerLiteral() : {
     Token lexem;
 }{
-    lexem=<DIGIT>
+    lexem=<INTEGER_LITERAL>
     { return new IntegerLiteral(Integer.parseInt(lexem.toString())); }
 }
 
@@ -103,7 +116,7 @@ MainClass MainClass() : {
     Identifier formalId;
     Statement statement;
 }{
-    "class" classId=Identifier() "{" "public" "static" "void" "main" "(" "String" "[" "]" formalId=Identifier() ")" "{" statement=Statement() "}" "}"
+    <CLASS> classId=Identifier() <L_BRACE> <PUBLIC> <STATIC> <VOID> <MAIN> <L_PAREN> <STRING> <L_BRACKET> <R_BRACKET> formalId=Identifier() <R_PAREN> <L_BRACE> statement=Statement() <R_BRACE> <R_BRACE>
     {
         return new MainClass(classId, formalId, statement);
     }
@@ -115,7 +128,7 @@ void ClassDeclSimple(ClassDeclList list) : {
     VarDeclList varList;
     MethodDeclList methodList;
 }{
-    "class" (classId=Identifier()) ("extends" parentId=Identifier())? "{" varList=VarDeclList() methodList=MethodDeclList() "}"
+    <CLASS> (classId=Identifier()) (<EXTENDS> parentId=Identifier())? <L_BRACE> varList=VarDeclList() methodList=MethodDeclList() <R_BRACE>
     {
         if(parentId != null) {
         list.addElement(new ClassDeclExtends(classId, parentId, varList, methodList));
@@ -180,7 +193,7 @@ void MethodDecl(MethodDeclList list): {
     StatementList statementList;
     Exp returnExpression;
 } {
-    "public" returnType=Typing() methodName=Identifier() "(" (formalList=FormalList())? ")" "{" varDeclList=VarDeclList() statementList=StatementList()  "return" returnExpression=Expression() "}"
+    <PUBLIC> returnType=Typing() methodName=Identifier() <L_PAREN> (formalList=FormalList())? <R_PAREN> <L_BRACE> varDeclList=VarDeclList() statementList=StatementList() <RETURN> returnExpression=Expression() <R_BRACE>
     {
         list.addElement(new MethodDecl(returnType, methodName, formalList, varDeclList, statementList, returnExpression));
     }
@@ -209,7 +222,11 @@ ExpList ExpList() : {
     Exp exp;
     ExpList list = new ExpList();
 } {
-    (exp=Expression(){list.addElement(exp);} ("," Expression(){list.addElement(exp);}))*
+    (exp=Expression(){list.addElement(exp);} (<COMMA> Expression(){list.addElement(exp);}))*
+    {
+        return list;
+    }
+    |
     {
         return list;
     }
@@ -256,7 +273,7 @@ Exp BinaryExpression(Exp first) : {
         return new Times(first, second);
     }
     |
-    "[" second=Expression() "]"
+    <L_BRACKET> second=Expression() <R_BRACKET>
     {
         return new ArrayLookup(first, second);
     }
@@ -277,45 +294,16 @@ Exp UnaryExpression() : {
     Token intLexem = null;
     Token idLexem = null;
 }{
-    "false"
-    {
-        return new False();
-    }
-    |
-    "true"
-    {
-        return new True();
-    }
-    |
-    "!" exp=Expression()
-    {
-        return new Not(exp);
-    }
-    |
-    "(" exp=Expression() ")"
-    {
-        return exp;
-    }
-    |
-    "this"
-    {
-        return new This();
-    }
-    |
-    exp=NewExpression()
-    {
-        return exp;
-    }
-    |
-    idLexem=<IDENTIFIER_LITERAL>
-    {
+    <FALSE>{ return new False(); }
+    | <TRUE> { return new True(); }
+    | <NOT> exp=Expression() { return new Not(exp); }
+    | <L_PAREN> exp=Expression() <R_PAREN> {return exp;}
+    | <THIS> { return new This(); }
+    | exp=NewExpression() { return exp; }
+    | idLexem=<IDENTIFIER_LITERAL> {
         return new IdentifierExp(idLexem.toString());
     }
-    |
-    exp=IntegerLiteral()
-    {
-        return exp;
-    }
+    | exp=IntegerLiteral() { return exp; }
 }
 
 Exp NewExpression() : {
@@ -324,12 +312,12 @@ Exp NewExpression() : {
 }{
     // TODO: Why is this needed? Without it javacc generates invalid code.
     LOOKAHEAD(2)
-    "new" "int" "[" exp=Expression() "]"
+    <NEW> <INT> <L_BRACKET> exp=Expression() <R_BRACKET>
     {
         return new NewArray(exp);
     }
     |
-    "new" id=Identifier() "()"
+    <NEW> id=Identifier() <L_PAREN> <R_PAREN>
     {
         return new NewObject(id);
     }
@@ -339,29 +327,36 @@ Exp DotExpression(Exp first) : {
     Identifier methodId = null;
     ExpList expList = null;
 }{
-    // TODO: Why is this needed? Without it javacc generates invalid code.
-    LOOKAHEAD(2)
-    "." "length"
-    {
-        return new ArrayLength(first);
-    }
-    |
-    "." methodId=Identifier() "(" (expList=ExpList()) ")"
-    {
-        return new Call(first, methodId, expList);
-    }
+    <DOT>
+    (
+      <LENGTH>
+      {
+          return new ArrayLength(first);
+      }
+      |
+      methodId=Identifier()<L_PAREN>
+      (
+        <R_PAREN>
+        {
+            return new Call(first, methodId, new ExpList());
+        }
+        |
+        (expList=ExpList()<R_PAREN>)
+        {
+            return new Call(first, methodId, expList);
+        }
+      )
+    )
 }
 
 Exp Expression() : {
-    Exp first;
     Exp exp = null;
 }{
-    first=UnaryExpression()
-    (
-      (exp=BinaryExpression(first)) {return exp;}
-      |
-      {return first;}
-    )
+    exp=UnaryExpression()
+    [
+      (exp=BinaryExpression(exp))
+    ]
+    {return exp;}
 }
 
 Statement Statement() : {
@@ -397,7 +392,7 @@ Statement Statement() : {
 Block Block() : {
   StatementList statementList = null;
 }{
-    "{" statementList=StatementList() "}"
+    <L_BRACE> statementList=StatementList() <R_BRACE>
     {
         return new Block(statementList);
     }
@@ -418,7 +413,7 @@ If If() : {
     Statement thenStatement = null;
     Statement elseStatement = null;
 }{
-    "if" "(" exp=Expression() ")" thenStatement=Statement() "else" elseStatement=Statement()
+    <IF> <L_PAREN> exp=Expression() <R_PAREN> thenStatement=Statement() <ELSE> elseStatement=Statement()
     {
         return new If(exp, thenStatement, elseStatement);
     }
@@ -428,7 +423,7 @@ While While() : {
     Exp exp = null;
     Statement statement = null;
 }{
-    "while" "(" exp=Expression() ")" statement=Statement()
+    <WHILE> <L_PAREN> exp=Expression() <R_PAREN> statement=Statement()
     {
         return new While(exp, statement);
     }
@@ -437,7 +432,7 @@ While While() : {
 Print Print() : {
     Exp exp = null;
 }{
-    "System.out.println" "(" exp=Expression() ")" ";"
+    "System.out.println" <L_PAREN> exp=Expression() <R_PAREN> <SEMI>
     {
         return new Print(exp);
     }
@@ -463,7 +458,7 @@ Assign Assign() : {
     Identifier id = null;
     Exp exp = null;
 }{
-    id=Identifier() "=" exp=Expression() ";"
+    id=Identifier() <EQ> exp=Expression() <SEMI>
     {
         return new Assign(id, exp);
     }
@@ -474,7 +469,7 @@ ArrayAssign ArrayAssign() : {
     Exp index = null;
     Exp exp = null;
 }{
-    id=Identifier() "[" index=Expression() "]" "=" exp=Expression() ";"
+    id=Identifier() <L_BRACKET> index=Expression() <R_BRACKET> <EQ> exp=Expression() <SEMI>
     {
         return new ArrayAssign(id, index, exp);
     }
