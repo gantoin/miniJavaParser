@@ -32,6 +32,8 @@ SKIP : {
     < WHITESPACE: (" " | "\n") >  // DIESE DEFINITION ERGÄNZEN !!!
 
     /* COMMENTS */
+    | < BLOCK_COMMENT : "/*" (~["*"])* "*" (~["/"] (~["*"])* "*")* "/" >
+    | < LINE_COMMENT : "//" (~["\n"])* "\n" >
 }
 
 
@@ -152,40 +154,32 @@ VarDecl VarDecl() : {
     Typing type;
     Identifier id;
 }{
-    type=Typing() id=Identifier()
+    type=Typing() id=Identifier() <SEMI>
     {
         return new VarDecl(type, id);
     }
 }
 
 Typing Typing() : {
-    Token lexem;
+    Token lexem = null;
 } {
-    lexem=<INT_ARRAY>|lexem=<BOOLEAN>|lexem=<INT>|lexem=<IDENTIFIER_LITERAL>
-    {
-        String lexemAsString = lexem.toString();
-        if(lexemAsString.equals("int")) {
-            return new IntegerTyping();
-        } else if(lexemAsString.equals("intarray")) {
-            return new IntArrayTyping();
-        } else if(lexemAsString.equals("boolean")) {
-            return new BooleanTyping();
-        } else {
-            return new IdentifierTyping(lexemAsString);
-        }
-    }
+    <INT> { return new IntegerTyping(); }
+    | <INT_ARRAY> { return new IntArrayTyping(); }
+    | <BOOLEAN> { return new BooleanTyping(); }
+    | lexem=<IDENTIFIER_LITERAL> { return new IdentifierTyping(lexem.toString()); }
 }
 
 MethodDeclList MethodDeclList(): {
+    MethodDecl declaration;
     MethodDeclList list = new MethodDeclList();
 } {
-    (MethodDecl(list))*
+    (declaration=MethodDecl(){list.addElement(declaration);})*
     {
         return list;
     }
 }
 
-void MethodDecl(MethodDeclList list): {
+MethodDecl MethodDecl(): {
     Typing returnType;
     Identifier methodName;
     FormalList formalList = new FormalList();
@@ -195,7 +189,7 @@ void MethodDecl(MethodDeclList list): {
 } {
     <PUBLIC> returnType=Typing() methodName=Identifier() <L_PAREN> (formalList=FormalList())? <R_PAREN> <L_BRACE> varDeclList=VarDeclList() statementList=StatementList() <RETURN> returnExpression=Expression() <R_BRACE>
     {
-        list.addElement(new MethodDecl(returnType, methodName, formalList, varDeclList, statementList, returnExpression));
+        return new MethodDecl(returnType, methodName, formalList, varDeclList, statementList, returnExpression);
     }
 }
 
@@ -241,7 +235,6 @@ Exp BinaryExpression(Exp first) : {
   Exp object = null;
   Identifier methodId = null;
   ExpList expList = null;
-
   Identifier id = null;
 
   Exp size = null;
@@ -278,10 +271,18 @@ Exp BinaryExpression(Exp first) : {
         return new ArrayLookup(first, second);
     }
     |
-    exp=DotExpression(first)
-    {
-        return exp;
-    }
+    <DOT>
+    (
+      <LENGTH>
+      {
+          return new ArrayLength(first);
+      }
+      |
+      methodId=Identifier() <L_PAREN> expList=ExpList() <R_PAREN>
+      {
+          return new Call(first, methodId, expList);
+      }
+    )
     |
     ""
     {
@@ -291,6 +292,7 @@ Exp BinaryExpression(Exp first) : {
 
 Exp UnaryExpression() : {
     Exp exp;
+    Identifier id;
     Token intLexem = null;
     Token idLexem = null;
 }{
@@ -299,54 +301,15 @@ Exp UnaryExpression() : {
     | <NOT> exp=Expression() { return new Not(exp); }
     | <L_PAREN> exp=Expression() <R_PAREN> {return exp;}
     | <THIS> { return new This(); }
-    | exp=NewExpression() { return exp; }
+    | (
+      <NEW>
+        ( id=Identifier() <L_PAREN> <R_PAREN> ) { return new NewObject(id); }
+        | ( <INT> <L_BRACKET> exp=Expression() <R_BRACKET> ) { return new NewArray(exp); }
+    )
     | idLexem=<IDENTIFIER_LITERAL> {
         return new IdentifierExp(idLexem.toString());
     }
     | exp=IntegerLiteral() { return exp; }
-}
-
-Exp NewExpression() : {
-    Exp exp;
-    Identifier id;
-}{
-    // TODO: Why is this needed? Without it javacc generates invalid code.
-    LOOKAHEAD(2)
-    <NEW> <INT> <L_BRACKET> exp=Expression() <R_BRACKET>
-    {
-        return new NewArray(exp);
-    }
-    |
-    <NEW> id=Identifier() <L_PAREN> <R_PAREN>
-    {
-        return new NewObject(id);
-    }
-}
-
-Exp DotExpression(Exp first) : {
-    Identifier methodId = null;
-    ExpList expList = null;
-}{
-    <DOT>
-    (
-      <LENGTH>
-      {
-          return new ArrayLength(first);
-      }
-      |
-      methodId=Identifier()<L_PAREN>
-      (
-        <R_PAREN>
-        {
-            return new Call(first, methodId, new ExpList());
-        }
-        |
-        (expList=ExpList()<R_PAREN>)
-        {
-            return new Call(first, methodId, expList);
-        }
-      )
-    )
 }
 
 Exp Expression() : {
@@ -362,7 +325,6 @@ Exp Expression() : {
 Statement Statement() : {
     Statement statement = null;
 }{
-    LOOKAHEAD(2)
     statement=Block()
     {
         return statement;
@@ -439,38 +401,20 @@ Print Print() : {
 }
 
 Statement AssignStatement() : {
-    Statement statement = null;
-}{
-    // TODO: Why is this needed? Without it javacc generates invalid code.
-    LOOKAHEAD(2)
-    statement=Assign()
-    {
-        return statement;
-    }
-    |
-    statement=ArrayAssign()
-    {
-        return statement;
-    }
-}
-
-Assign Assign() : {
     Identifier id = null;
     Exp exp = null;
+    Exp index = null;
 }{
-    id=Identifier() <EQ> exp=Expression() <SEMI>
-    {
+    id=Identifier()
+    (
+      <EQ> exp=Expression() <SEMI>
+    ) {
         return new Assign(id, exp);
     }
-}
-
-ArrayAssign ArrayAssign() : {
-    Identifier id = null;
-    Exp index = null;
-    Exp exp = null;
-}{
-    id=Identifier() <L_BRACKET> index=Expression() <R_BRACKET> <EQ> exp=Expression() <SEMI>
-    {
+    |
+    (
+      <L_BRACKET> index=Expression() <R_BRACKET> <EQ> exp=Expression() <SEMI>
+    ) {
         return new ArrayAssign(id, index, exp);
     }
 }

@@ -15,16 +15,16 @@ class AppTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            "_TEST_Blatt01",
+            // "_TEST_Blatt01",
             "_TEST_Blatt02",
-            "Factorial",
-            "BubbleSort",
-            "BinarySearch",
-            "BinaryTree",
-            "LinearSearch",
-            "LinkedList",
-            "QuickSort",
-            "TreeVisitor"
+            // "Factorial",
+            // "BubbleSort",
+            // "BinarySearch",
+            // "BinaryTree",
+            // "LinearSearch",
+            // "LinkedList",
+            // "QuickSort",
+            // "TreeVisitor"
     })
     public void recognizesTokens(String sample) throws FileNotFoundException, ParseException {
         App app = new App(sample);

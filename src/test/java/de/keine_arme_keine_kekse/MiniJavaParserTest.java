@@ -10,16 +10,20 @@ import org.junit.jupiter.api.Test;
 import de.keine_arme_keine_kekse.parser.MiniJavaParser;
 import de.keine_arme_keine_kekse.parser.ParseException;
 import de.keine_arme_keine_kekse.syntaxtree.And;
+import de.keine_arme_keine_kekse.syntaxtree.Assign;
 import de.keine_arme_keine_kekse.syntaxtree.Call;
 import de.keine_arme_keine_kekse.syntaxtree.Exp;
 import de.keine_arme_keine_kekse.syntaxtree.ExpList;
 import de.keine_arme_keine_kekse.syntaxtree.False;
 import de.keine_arme_keine_kekse.syntaxtree.IdentifierExp;
 import de.keine_arme_keine_kekse.syntaxtree.IntegerLiteral;
+import de.keine_arme_keine_kekse.syntaxtree.IntegerTyping;
 import de.keine_arme_keine_kekse.syntaxtree.LessThan;
+import de.keine_arme_keine_kekse.syntaxtree.MethodDecl;
 import de.keine_arme_keine_kekse.syntaxtree.Minus;
 import de.keine_arme_keine_kekse.syntaxtree.Not;
 import de.keine_arme_keine_kekse.syntaxtree.Plus;
+import de.keine_arme_keine_kekse.syntaxtree.Statement;
 import de.keine_arme_keine_kekse.syntaxtree.This;
 import de.keine_arme_keine_kekse.syntaxtree.Times;
 import de.keine_arme_keine_kekse.syntaxtree.True;
@@ -29,10 +33,10 @@ public class MiniJavaParserTest {
 
     @Test()
     public void parsesVarDeclaration() throws ParseException {
-        MiniJavaParser parser = parserFor("int number = 0;");
+        MiniJavaParser parser = parserFor("int number;");
         VarDecl decl = parser.VarDecl();
         assertEquals("number", decl.id.getName());
-        assertEquals("int", decl.type.toString());
+        assertEquals(IntegerTyping.class, decl.type.getClass());
     }
 
     @Test()
@@ -186,6 +190,46 @@ public class MiniJavaParserTest {
         ExpList result = parser.ExpList();
 
         assertEquals(3, result.size());
+    }
+
+    @Test
+    public void skipsSingleLineComment() throws ParseException {
+        MiniJavaParser parser = parserFor("// Hello World\ntrue");
+        Exp result = parser.Expression();
+
+        assertEquals(True.class, result.getClass());
+    }
+
+    @Test
+    public void skipsBlockCommentSingleLine() throws ParseException {
+        MiniJavaParser parser = parserFor("/* test */true");
+        Exp result = parser.Expression();
+
+        assertEquals(True.class, result.getClass());
+    }
+
+    @Test
+    public void skipsBlockCommentMultiLine() throws ParseException {
+        MiniJavaParser parser = parserFor("/* test\n Hello 2\nTest */true");
+        Exp result = parser.Expression();
+
+        assertEquals(True.class, result.getClass());
+    }
+
+    @Test
+    public void parsesAssign() throws ParseException {
+        MiniJavaParser parser = parserFor("x = 1;");
+        Statement result = parser.AssignStatement();
+
+        assertEquals(Assign.class, result.getClass());
+    }
+
+    @Test
+    public void parsesMethodDecl() throws ParseException {
+        MiniJavaParser parser = parserFor("public int test(){\nint x;\nint nt;\nint[] a;\nx = 1;\n return 0;\n}");
+        MethodDecl result = parser.MethodDecl();
+
+        assertEquals(MethodDecl.class, result.getClass());
     }
 
     private MiniJavaParser parserFor(String input) {
