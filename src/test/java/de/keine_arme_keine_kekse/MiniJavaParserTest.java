@@ -5,14 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import de.keine_arme_keine_kekse.parser.MiniJavaParser;
 import de.keine_arme_keine_kekse.parser.ParseException;
 import de.keine_arme_keine_kekse.syntaxtree.And;
+import de.keine_arme_keine_kekse.syntaxtree.Call;
 import de.keine_arme_keine_kekse.syntaxtree.Exp;
 import de.keine_arme_keine_kekse.syntaxtree.False;
+import de.keine_arme_keine_kekse.syntaxtree.IdentifierExp;
 import de.keine_arme_keine_kekse.syntaxtree.IntegerLiteral;
 import de.keine_arme_keine_kekse.syntaxtree.LessThan;
 import de.keine_arme_keine_kekse.syntaxtree.Minus;
@@ -26,7 +27,6 @@ import de.keine_arme_keine_kekse.syntaxtree.VarDecl;
 public class MiniJavaParserTest {
 
     @Test()
-    @Disabled
     public void parsesVarDeclaration() throws ParseException {
         MiniJavaParser parser = parserFor("int number = 0;");
         VarDecl decl = parser.VarDecl();
@@ -149,6 +149,34 @@ public class MiniJavaParserTest {
         MiniJavaParser parser = parserFor("0 * 1");
         Exp result = parser.Expression();
         assertEquals(Times.class, result.getClass());
+    }
+
+    @Test
+    public void parsesCall() throws ParseException {
+        MiniJavaParser parser = parserFor("test.foo()");
+        Exp result = parser.Expression();
+        assertEquals(Call.class, result.getClass());
+
+        Call call = (Call) result;
+        assertEquals(IdentifierExp.class, call.exp.getClass());
+
+        IdentifierExp identifier = (IdentifierExp) call.exp;
+        assertEquals("test", identifier.getName());
+        assertEquals("foo", call.methodId.getName());
+    }
+
+    @Test
+    public void parsesCallWithArgs() throws ParseException {
+        MiniJavaParser parser = parserFor("test.foo(42, true, false)");
+        Exp result = parser.Expression();
+        assertEquals(Call.class, result.getClass());
+
+        Call call = (Call) result;
+        assertEquals(IdentifierExp.class, call.exp.getClass());
+
+        IdentifierExp identifier = (IdentifierExp) call.exp;
+        assertEquals("test", identifier.getName());
+        assertEquals("foo", call.methodId.getName());
     }
 
     private MiniJavaParser parserFor(String input) {
