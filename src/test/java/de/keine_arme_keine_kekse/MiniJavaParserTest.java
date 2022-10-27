@@ -13,6 +13,7 @@ import de.keine_arme_keine_kekse.parser.ParseException;
 import de.keine_arme_keine_kekse.syntaxtree.And;
 import de.keine_arme_keine_kekse.syntaxtree.Exp;
 import de.keine_arme_keine_kekse.syntaxtree.False;
+import de.keine_arme_keine_kekse.syntaxtree.IntegerLiteral;
 import de.keine_arme_keine_kekse.syntaxtree.LessThan;
 import de.keine_arme_keine_kekse.syntaxtree.Minus;
 import de.keine_arme_keine_kekse.syntaxtree.Not;
@@ -65,15 +66,66 @@ public class MiniJavaParserTest {
     }
 
     @Test()
+    public void parsesParenthesis() throws ParseException {
+        MiniJavaParser parser = parserFor("(true)");
+        Exp result = parser.UnaryExpression();
+        assertEquals(True.class, result.getClass());
+    }
+
+    @Test()
     public void parsesAndExpression() throws ParseException {
         MiniJavaParser parser = parserFor("true && false");
         Exp result = parser.Expression();
         assertEquals(And.class, result.getClass());
+
+        And and = (And) result;
+        assertEquals(True.class, and.left.getClass());
+        assertEquals(False.class, and.right.getClass());
+    }
+
+    @Test()
+    public void parsesAnd3Expression() throws ParseException {
+        MiniJavaParser parser = parserFor("true && false && true");
+        Exp result = parser.Expression();
+        assertEquals(And.class, result.getClass());
+
+        And and = (And) result;
+        assertEquals(True.class, and.left.getClass());
+        assertEquals(And.class, and.right.getClass());
+
+        And andRight = (And) and.right;
+        assertEquals(False.class, andRight.left.getClass());
+        assertEquals(True.class, andRight.right.getClass());
+    }
+
+    @Test()
+    public void parsesAndComplexExpression() throws ParseException {
+        MiniJavaParser parser = parserFor("(true && false) && true)");
+        Exp result = parser.Expression();
+        assertEquals(And.class, result.getClass());
+
+        And and = (And) result;
+        assertEquals(And.class, and.left.getClass());
+        assertEquals(True.class, and.right.getClass());
+
+        And andLeft = (And) and.left;
+        assertEquals(True.class, andLeft.left.getClass());
+        assertEquals(False.class, andLeft.right.getClass());
+    }
+
+    @Test()
+    public void parsesIntegerLiteralAsExpression() throws ParseException {
+        MiniJavaParser parser = parserFor("42");
+        Exp result = parser.Expression();
+        assertEquals(IntegerLiteral.class, result.getClass());
+
+        IntegerLiteral literal = (IntegerLiteral) result;
+        assertEquals(42, literal.getValue());
     }
 
     @Test()
     public void parsesLessThan() throws ParseException {
-        MiniJavaParser parser = parserFor("0 < 1");
+        MiniJavaParser parser = parserFor("0<1");
         Exp result = parser.Expression();
         assertEquals(LessThan.class, result.getClass());
     }

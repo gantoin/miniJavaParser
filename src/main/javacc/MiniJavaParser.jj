@@ -64,10 +64,10 @@ TOKEN : {
     | < STRING : "String" >
 
     /* INTEGERS */
-    | < INTEGER_LITERAL : ["0"-"9"] >
+    | < DIGIT : ["0"-"9"] >
 
     /* IDENTIFIERS */
-    | < IDENTIFIER_LITERAL : "[a-Z][a-Z0-9*]" >
+    | < IDENTIFIER_LITERAL : "[a-Z][a-Z0-9]*" >
 
     /* SEPARATORS */
     | < L_PAREN : "(" >
@@ -89,6 +89,13 @@ Identifier Identifier() : {
 }{
     lexem=<IDENTIFIER_LITERAL>
     { return new Identifier(lexem.toString()); }
+}
+
+IntegerLiteral IntegerLiteral() : {
+    Token lexem;
+}{
+    lexem=<DIGIT>
+    { return new IntegerLiteral(Integer.parseInt(lexem.toString())); }
 }
 
 MainClass MainClass() : {
@@ -208,7 +215,7 @@ ExpList ExpList() : {
     }
 }
 
-Exp ExpressionR(Exp first) : {
+Exp BinaryExpression(Exp first) : {
   Exp second;
 
   Exp array = null;
@@ -218,9 +225,6 @@ Exp ExpressionR(Exp first) : {
   Identifier methodId = null;
   ExpList expList = null;
 
-  Token intLexem = null;
-
-  Token idLexem = null;
   Identifier id = null;
 
   Exp size = null;
@@ -262,16 +266,6 @@ Exp ExpressionR(Exp first) : {
         return exp;
     }
     |
-    intLexem=<INTEGER_LITERAL>
-    {
-        return new IntegerLiteral(Integer.parseInt(intLexem.toString()));
-    }
-    |
-    idLexem=<IDENTIFIER_LITERAL>
-    {
-        return new IdentifierExp(idLexem.toString());
-    }
-    |
     ""
     {
         return exp;
@@ -280,6 +274,8 @@ Exp ExpressionR(Exp first) : {
 
 Exp UnaryExpression() : {
     Exp exp;
+    Token intLexem = null;
+    Token idLexem = null;
 }{
     "false"
     {
@@ -307,6 +303,16 @@ Exp UnaryExpression() : {
     }
     |
     exp=NewExpression()
+    {
+        return exp;
+    }
+    |
+    idLexem=<IDENTIFIER_LITERAL>
+    {
+        return new IdentifierExp(idLexem.toString());
+    }
+    |
+    exp=IntegerLiteral()
     {
         return exp;
     }
@@ -350,15 +356,12 @@ Exp Expression() : {
     Exp first;
     Exp exp = null;
 }{
-    first=ExpressionR(null)
-    exp=ExpressionR(first)
-    {return first;}
-    |
-    exp=UnaryExpression()
-    {
-        return exp;
-    }
-
+    first=UnaryExpression()
+    (
+      (exp=BinaryExpression(first)) {return exp;}
+      |
+      {return first;}
+    )
 }
 
 Statement Statement() : {
