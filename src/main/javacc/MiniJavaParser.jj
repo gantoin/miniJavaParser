@@ -11,7 +11,7 @@ PARSER_BEGIN(MiniJavaParser)
     package de.keine_arme_keine_kekse.parser;
 
     import de.keine_arme_keine_kekse.syntaxtree.*;
-    import de.keine_arme_keine_kekse.visitor.symboltable.*;
+    import de.keine_arme_keine_kekse.visitor.*;
 
     public class MiniJavaParser {
 
@@ -119,21 +119,22 @@ void ClassDeclSimple(ClassDeclList list) : {
 }
 
 VarDeclList VarDeclList(): {
+    VarDecl declaration;
     VarDeclList list = new VarDeclList();
 }{
-    (VarDecl(list))*
+    (declaration=VarDecl(){list.addElement(declaration);})*
     {
         return list;
     }
 }
 
-void VarDecl(VarDeclList list) : {
+VarDecl VarDecl() : {
     Typing type;
     Identifier id;
 }{
     type=Typing() id=Identifier()
     {
-        list.addElement(new VarDecl(type, id));
+        return new VarDecl(type, id);
     }
 }
 
@@ -198,21 +199,12 @@ void Formal(FormalList list) : {
 }
 
 ExpList ExpList() : {
+    Exp exp;
     ExpList list = new ExpList();
 } {
-    ExpressionInList(list) ("," ExpressionInList(list))*
+    (exp=Expression(){list.addElement(exp);} ("," Expression(){list.addElement(exp);}))*
     {
         return list;
-    }
-}
-
-Exp ExpressionInList(ExpList list) : {
-    Exp exp;
-}{
-    exp=Expression()
-    {
-        list.addElement(exp);
-        return exp;
     }
 }
 
@@ -275,29 +267,28 @@ Exp ExpressionR(Exp first) : {
         return new IntegerLiteral(Integer.parseInt(intLexem.toString()));
     }
     |
-    "true"
-    {
-        return new True();
-    }
-    |
-    "false"
-    {
-        return new False();
-    }
-    |
     idLexem=<IDENTIFIER_LITERAL>
     {
         return new IdentifierExp(idLexem.toString());
     }
     |
-    "this"
-    {
-        return new This();
-    }
-    |
-    exp=NewExpression()
+    ""
     {
         return exp;
+    }
+}
+
+Exp UnaryExpression() : {
+    Exp exp;
+}{
+    "false"
+    {
+        return new False();
+    }
+    |
+    "true"
+    {
+        return new True();
     }
     |
     "!" exp=Expression()
@@ -310,9 +301,14 @@ Exp ExpressionR(Exp first) : {
         return exp;
     }
     |
-    ""
+    "this"
     {
-        return first;
+        return new This();
+    }
+    |
+    exp=NewExpression()
+    {
+        return exp;
     }
 }
 
@@ -344,20 +340,25 @@ Exp DotExpression(Exp first) : {
         return new ArrayLength(first);
     }
     |
-    "." methodId=Identifier() "(" (expList=ExpList())? ")"
+    "." methodId=Identifier() "(" (expList=ExpList()) ")"
     {
         return new Call(first, methodId, expList);
     }
 }
 
 Exp Expression() : {
-    Exp first = null;
-    Exp rest = null;
+    Exp first;
+    Exp exp = null;
 }{
-    first=ExpressionR(null) rest=ExpressionR(first)
+    first=ExpressionR(null)
+    exp=ExpressionR(first)
+    {return first;}
+    |
+    exp=UnaryExpression()
     {
-        return rest;
+        return exp;
     }
+
 }
 
 Statement Statement() : {
@@ -400,20 +401,12 @@ Block Block() : {
 }
 
 StatementList StatementList() : {
+    Statement statement;
     StatementList list = new StatementList();
 }{
-    (StatementInList(list))*
+    (statement=Statement(){list.addElement(statement);})*
     {
         return list;
-    }
-}
-
-void StatementInList(StatementList list) : {
-    Statement statement;
-}{
-    statement=Statement()
-    {
-        list.addElement(statement);
     }
 }
 
@@ -499,6 +492,7 @@ Program Program() : {
 }{
     mainClass=MainClass()
     classes=ClassDeclList()
+    <EOF>
     {
         return new Program(mainClass, classes);
     }
