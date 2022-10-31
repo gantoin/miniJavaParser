@@ -93,6 +93,7 @@ TOKEN : {
     | < NOT : "!" >
     | < AND : "&&" >
     | < EQ : "=" >
+    | < LESS_THAN : "<" >
 }
 
 /*******************************************************************************
@@ -207,25 +208,34 @@ MethodDecl MethodDecl(): {
                 | <BOOLEAN> { varDeclarationType = new BooleanTyping(); }
             )
             
-            varDeclarationId=Identifier() <SEMI> { varDeclaration = new VarDecl(varDeclarationType, varDeclarationId); varDeclList.addElement(varDeclaration); }
+            varDeclarationId=Identifier() <SEMI> {
+                varDeclaration = new VarDecl(varDeclarationType, varDeclarationId);
+                varDeclList.addElement(varDeclaration);
+                if (statementList.size() != 0) {
+                    throw new ParseException("Got var decl after statements :(");
+                }
+            }
         )
         |
         (
             lexem=<IDENTIFIER_LITERAL>
             (
                 varDeclarationId=Identifier() <SEMI> { 
-                    varDeclarationType = new IdentifierTyping(lexem.toString());varDeclaration = new VarDecl(varDeclarationType, varDeclarationId); varDeclList.addElement(varDeclaration); }
-                | <EQ> statement=AssignStatementRest(new Identifier(lexem.toString())) { statementList.addElement(statement); }
-                | <L_BRACKET> statement=ArrayAssignRest(new Identifier(lexem.toString())) { statementList.addElement(statement); }
-
+                    varDeclarationType = new IdentifierTyping(lexem.toString());
+                    varDeclaration = new VarDecl(varDeclarationType, varDeclarationId);
+                    varDeclList.addElement(varDeclaration);
+                }
+                | <EQ> statement=AssignStatementRest(new Identifier(lexem.toString())) {
+                    statementList.addElement(statement);
+                }
+                | <L_BRACKET> statement=ArrayAssignRest(new Identifier(lexem.toString())) {
+                    statementList.addElement(statement);
+                }
             )
-            
-
         )
-        |
-        statement=Statement() { statementList.addElement(statement); }
     )*
 
+    (statement=Statement() { statementList.addElement(statement); })*
     // varDeclList=VarDeclList()
     
     
@@ -285,27 +295,27 @@ Exp BinaryExpression(Exp first) : {
 
   Exp exp = null;
 }{
-    "&&" second=Expression()
+    <AND> second=Expression()
     {
         return new And(first, second);
     }
     |
-    "<" second=Expression()
+    <LESS_THAN> second=Expression()
     {
         return new LessThan(first, second);
     }
     |
-    "+" second=Expression()
+    <PLUS> second=Expression()
     {
         return new Plus(first, second);
     }
     |
-    "-" second=Expression()
+    <MINUS> second=Expression()
     {
         return new Minus(first, second);
     }
     |
-    "*" second=Expression()
+    <TIMES> second=Expression()
     {
         return new Times(first, second);
     }
@@ -315,18 +325,10 @@ Exp BinaryExpression(Exp first) : {
         return new ArrayLookup(first, second);
     }
     |
-    <DOT>
-    (
-      <LENGTH>
-      {
-          return new ArrayLength(first);
-      }
-      |
-      methodId=Identifier() <L_PAREN> expList=ExpList() <R_PAREN>
-      {
-          return new Call(first, methodId, expList);
-      }
-    )
+    <DOT> methodId=Identifier() <L_PAREN> expList=ExpList() <R_PAREN>
+    {
+        return new Call(first, methodId, expList);
+    }
     |
     ""
     {
@@ -350,9 +352,15 @@ Exp UnaryExpression() : {
         ( id=Identifier() <L_PAREN> <R_PAREN> ) { return new NewObject(id); }
         | ( <INT> <L_BRACKET> exp=Expression() <R_BRACKET> ) { return new NewArray(exp); }
     )
-    | idLexem=<IDENTIFIER_LITERAL> {
-        return new IdentifierExp(idLexem.toString());
-    }
+    | idLexem=<IDENTIFIER_LITERAL> (
+        <DOT><LENGTH> {
+            return new ArrayLength(new IdentifierExp(idLexem.toString()));
+        }
+        |
+        {
+            return new IdentifierExp(idLexem.toString());
+        }
+    )
     | exp=IntegerLiteral() { return exp; }
 }
 

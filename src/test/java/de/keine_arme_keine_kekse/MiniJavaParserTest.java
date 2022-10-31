@@ -1,6 +1,7 @@
 package de.keine_arme_keine_kekse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import de.keine_arme_keine_kekse.parser.MiniJavaParser;
 import de.keine_arme_keine_kekse.parser.ParseException;
 import de.keine_arme_keine_kekse.syntaxtree.And;
+import de.keine_arme_keine_kekse.syntaxtree.ArrayLength;
 import de.keine_arme_keine_kekse.syntaxtree.Assign;
 import de.keine_arme_keine_kekse.syntaxtree.BooleanTyping;
 import de.keine_arme_keine_kekse.syntaxtree.Call;
@@ -106,6 +108,29 @@ public class MiniJavaParserTest {
         And andRight = (And) and.right;
         assertEquals(False.class, andRight.left.getClass());
         assertEquals(True.class, andRight.right.getClass());
+    }
+
+    @Test
+    public void parsesLengthLessThenIdentifier() throws ParseException {
+        MiniJavaParser parser = parserFor("a.length < l");
+        Exp result = parser.Expression();
+        assertEquals(LessThan.class, result.getClass());
+
+        LessThan lessThan = (LessThan) result;
+
+        assertEquals(ArrayLength.class, lessThan.left.getClass());
+        ArrayLength arrayLength = (ArrayLength) lessThan.left;
+        assertEquals(IdentifierExp.class, arrayLength.arrayId.getClass());
+        IdentifierExp arrayId = (IdentifierExp) arrayLength.arrayId;
+        assertEquals("a", arrayId.getName());
+
+        assertEquals(IdentifierExp.class, lessThan.right.getClass());
+    }
+
+    @Test()
+    public void parsersComplexExpression() throws ParseException {
+        MiniJavaParser parser = parserFor("(!(1 < a.length) && !(a.length < l) && 2 < 3 && !(3 < 4))");
+        Exp result = parser.Expression();
     }
 
     @Test()
@@ -221,13 +246,13 @@ public class MiniJavaParserTest {
         assertEquals(True.class, result.getClass());
     }
 
-    // @Test
-    // public void parsesAssign() throws ParseException {
-    // MiniJavaParser parser = parserFor("x = 1;");
-    // Statement result = parser.AssignStatement();
+    @Test
+    public void parsesAssign() throws ParseException {
+        MiniJavaParser parser = parserFor("x = 1;");
+        Statement result = parser.AssignStatement();
 
-    // assertEquals(Assign.class, result.getClass());
-    // }
+        assertEquals(Assign.class, result.getClass());
+    }
 
     @Test
     public void parsesVarDeclListEmpty() throws ParseException {
@@ -339,6 +364,13 @@ public class MiniJavaParserTest {
         MethodDecl result = parser.MethodDecl();
 
         assertEquals(MethodDecl.class, result.getClass());
+    }
+
+    @Test
+    public void throwsExceptionIfStatementIsFollowedByVarDecl() {
+        MiniJavaParser parser = parserFor("public int test(){\nint x;\nx = 1; int z;\n return 0;\n}");
+
+        assertThrows(ParseException.class, () -> parser.MethodDecl());
     }
 
     private MiniJavaParser parserFor(String input) {
