@@ -187,7 +187,7 @@ MethodDecl MethodDecl(): {
     StatementList statementList;
     Exp returnExpression;
 } {
-    <PUBLIC> returnType=Typing() methodName=Identifier() <L_PAREN> (formalList=FormalList())? <R_PAREN> <L_BRACE> varDeclList=VarDeclList() statementList=StatementList() <RETURN> returnExpression=Expression() <R_BRACE>
+    <PUBLIC> returnType=Typing() methodName=Identifier() <L_PAREN> (formalList=FormalList())? <R_PAREN> <L_BRACE> varDeclList=VarDeclList() statementList=StatementList() <RETURN> returnExpression=Expression() <SEMI> <R_BRACE>
     {
         return new MethodDecl(returnType, methodName, formalList, varDeclList, statementList, returnExpression);
     }
