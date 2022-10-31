@@ -388,11 +388,11 @@ Statement Statement() : {
     {
         return statement;
     }
-    // |
-    // statement=AssignStatement()
-    // {
-    //     return statement;
-    // }
+    |
+    statement=AssignStatement()
+    {
+        return statement;
+    }
 }
 
 Block Block() : {
