@@ -140,6 +140,25 @@ void ClassDeclSimple(ClassDeclList list) : {
     }
 }
 
+Typing Typing() : {
+    Token lexem = null;
+} {
+    <INT> { return new IntegerTyping(); }
+    | <INT_ARRAY> { return new IntArrayTyping(); }
+    | <BOOLEAN> { return new BooleanTyping(); }
+    | lexem=<IDENTIFIER_LITERAL> { return new IdentifierTyping(lexem.toString()); }
+}
+
+MethodDeclList MethodDeclList(): {
+    MethodDecl declaration;
+    MethodDeclList list = new MethodDeclList();
+} {
+    (declaration=MethodDecl(){list.addElement(declaration);})*
+    {
+        return list;
+    }
+}
+
 VarDeclList VarDeclList(): {
     VarDecl declaration;
     VarDeclList list = new VarDeclList();
@@ -160,34 +179,59 @@ VarDecl VarDecl() : {
     }
 }
 
-Typing Typing() : {
-    Token lexem = null;
-} {
-    <INT> { return new IntegerTyping(); }
-    | <INT_ARRAY> { return new IntArrayTyping(); }
-    | <BOOLEAN> { return new BooleanTyping(); }
-    | lexem=<IDENTIFIER_LITERAL> { return new IdentifierTyping(lexem.toString()); }
-}
-
-MethodDeclList MethodDeclList(): {
-    MethodDecl declaration;
-    MethodDeclList list = new MethodDeclList();
-} {
-    (declaration=MethodDecl(){list.addElement(declaration);})*
-    {
-        return list;
-    }
-}
 
 MethodDecl MethodDecl(): {
     Typing returnType;
     Identifier methodName;
     FormalList formalList = new FormalList();
-    VarDeclList varDeclList;
-    StatementList statementList;
-    Exp returnExpression;
+    Token lexem = null;
+
+    
+    VarDeclList varDeclList = new VarDeclList();
+    VarDecl varDeclaration = null;
+    Typing varDeclarationType = null;
+    Identifier varDeclarationId = null;
+    
+    StatementList statementList = new StatementList();
+    Statement statement = null;
+    Exp returnExpression = null;
 } {
-    <PUBLIC> returnType=Typing() methodName=Identifier() <L_PAREN> (formalList=FormalList())? <R_PAREN> <L_BRACE> varDeclList=VarDeclList() statementList=StatementList() <RETURN> returnExpression=Expression() <SEMI> <R_BRACE>
+    <PUBLIC> returnType=Typing() methodName=Identifier() <L_PAREN> (formalList=FormalList())? <R_PAREN> <L_BRACE> 
+    
+
+    (
+        (
+            (
+                <INT> { varDeclarationType = new IntegerTyping(); }
+                | <INT_ARRAY> { varDeclarationType = new IntArrayTyping(); }
+                | <BOOLEAN> { varDeclarationType = new BooleanTyping(); }
+            )
+            
+            varDeclarationId=Identifier() <SEMI> { varDeclaration = new VarDecl(varDeclarationType, varDeclarationId); varDeclList.addElement(varDeclaration); }
+        )
+        |
+        (
+            lexem=<IDENTIFIER_LITERAL>
+            (
+                varDeclarationId=Identifier() <SEMI> { 
+                    varDeclarationType = new IdentifierTyping(lexem.toString());varDeclaration = new VarDecl(varDeclarationType, varDeclarationId); varDeclList.addElement(varDeclaration); }
+                | <EQ> statement=AssignStatementRest(new Identifier(lexem.toString())) { statementList.addElement(statement); }
+                | <L_BRACKET> statement=ArrayAssignRest(new Identifier(lexem.toString())) { statementList.addElement(statement); }
+
+            )
+            
+
+        )
+        |
+        statement=Statement() { statementList.addElement(statement); }
+    )*
+
+    // varDeclList=VarDeclList()
+    
+    
+    // statementList=StatementList()
+    
+    <RETURN> returnExpression=Expression() <SEMI> <R_BRACE>
     {
         return new MethodDecl(returnType, methodName, formalList, varDeclList, statementList, returnExpression);
     }
@@ -344,11 +388,11 @@ Statement Statement() : {
     {
         return statement;
     }
-    |
-    statement=AssignStatement()
-    {
-        return statement;
-    }
+    // |
+    // statement=AssignStatement()
+    // {
+    //     return statement;
+    // }
 }
 
 Block Block() : {
@@ -397,6 +441,25 @@ Print Print() : {
     "System.out.println" <L_PAREN> exp=Expression() <R_PAREN> <SEMI>
     {
         return new Print(exp);
+    }
+}
+
+Statement AssignStatementRest(Identifier id) : {
+    Exp exp = null;
+}{
+    exp=Expression() <SEMI>
+    {
+        return new Assign(id, exp);
+    }
+}
+
+ArrayAssign ArrayAssignRest(Identifier id) : {
+    Exp index = null;
+    Exp exp = null;
+}{
+    index=Expression() <R_BRACKET> <EQ> exp=Expression() <SEMI>
+    {
+        return new ArrayAssign(id, index, exp);
     }
 }
 
