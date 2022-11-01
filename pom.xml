@@ -54,6 +54,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <version>3.0.0</version>
+        <?m2e execute onConfiguration,onIncremental?>
         <executions>
             <execution>
                 <id>01-add-test-sources</id>

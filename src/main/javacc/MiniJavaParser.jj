@@ -325,11 +325,6 @@ Exp BinaryExpression(Exp first) : {
         return new ArrayLookup(first, second);
     }
     |
-    <DOT> methodId=Identifier() <L_PAREN> expList=ExpList() <R_PAREN>
-    {
-        return new Call(first, methodId, expList);
-    }
-    |
     ""
     {
         return exp;
@@ -337,31 +332,40 @@ Exp BinaryExpression(Exp first) : {
 }
 
 Exp UnaryExpression() : {
-    Exp exp;
+    Exp exp = null;
     Identifier id;
     Token intLexem = null;
     Token idLexem = null;
+    Identifier methodId;
+    ExpList expList;
 }{
-    <FALSE>{ return new False(); }
-    | <TRUE> { return new True(); }
-    | <NOT> exp=Expression() { return new Not(exp); }
-    | <L_PAREN> exp=Expression() <R_PAREN> {return exp;}
-    | <THIS> { return new This(); }
-    | (
-      <NEW>
-        ( id=Identifier() <L_PAREN> <R_PAREN> ) { return new NewObject(id); }
-        | ( <INT> <L_BRACKET> exp=Expression() <R_BRACKET> ) { return new NewArray(exp); }
+    (
+        <FALSE>{ exp=new False(); }
+        | <TRUE> { exp=new True(); }
+        | <NOT> exp=Expression() { exp = new Not(exp); }
+        | <L_PAREN> exp=Expression() <R_PAREN> {}
+        | <THIS> { return new This(); }
+        | (
+        <NEW>
+            ( id=Identifier() <L_PAREN> <R_PAREN> ) { exp = new NewObject(id); }
+            | ( <INT> <L_BRACKET> exp=Expression() <R_BRACKET> ) { exp = new NewArray(exp); }
+        )
+        | idLexem=<IDENTIFIER_LITERAL> { exp =  new IdentifierExp(idLexem.toString()); }
+        | exp=IntegerLiteral() { }
     )
-    | idLexem=<IDENTIFIER_LITERAL> (
-        <DOT><LENGTH> {
-            return new ArrayLength(new IdentifierExp(idLexem.toString()));
-        }
-        |
-        {
-            return new IdentifierExp(idLexem.toString());
-        }
-    )
-    | exp=IntegerLiteral() { return exp; }
+    [
+        <DOT>(
+            <LENGTH> {
+                return new ArrayLength(exp);
+            }
+            |
+            methodId=Identifier() <L_PAREN> expList=ExpList() <R_PAREN>
+            {
+                return new Call(exp, methodId, expList);
+            }
+        )
+    ]
+    {return exp;}
 }
 
 Exp Expression() : {

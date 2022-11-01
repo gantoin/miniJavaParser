@@ -37,7 +37,6 @@ import de.keine_arme_keine_kekse.syntaxtree.VarDecl;
 import de.keine_arme_keine_kekse.syntaxtree.VarDeclList;
 
 public class MiniJavaParserTest {
-
     @Test()
     public void parsesVarDeclaration() throws ParseException {
         MiniJavaParser parser = parserFor("int number;");
