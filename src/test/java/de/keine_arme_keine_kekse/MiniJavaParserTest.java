@@ -26,6 +26,7 @@ import de.keine_arme_keine_kekse.syntaxtree.IntegerTyping;
 import de.keine_arme_keine_kekse.syntaxtree.LessThan;
 import de.keine_arme_keine_kekse.syntaxtree.MethodDecl;
 import de.keine_arme_keine_kekse.syntaxtree.Minus;
+import de.keine_arme_keine_kekse.syntaxtree.NewArray;
 import de.keine_arme_keine_kekse.syntaxtree.Not;
 import de.keine_arme_keine_kekse.syntaxtree.Plus;
 import de.keine_arme_keine_kekse.syntaxtree.Statement;
@@ -124,6 +125,28 @@ public class MiniJavaParserTest {
         assertEquals("a", arrayId.getName());
 
         assertEquals(IdentifierExp.class, lessThan.right.getClass());
+    }
+
+    @Test
+    public void parsesNewArray() throws ParseException {
+        MiniJavaParser parser = parserFor("new int[5]");
+        Exp result = parser.UnaryExpression();
+        assertEquals(NewArray.class, result.getClass());
+
+        NewArray newArray = (NewArray) result;
+        assertEquals(IntegerLiteral.class, newArray.exp.getClass());
+        IntegerLiteral size = (IntegerLiteral) newArray.exp;
+        assertEquals(5, size.getValue());
+    }
+
+    @Test
+    public void parsesLengthAsOuterExpression() throws ParseException {
+        MiniJavaParser parser = parserFor("(new int[5]).length");
+        Exp result = parser.Expression();
+        assertEquals(ArrayLength.class, result.getClass());
+
+        ArrayLength arrayLength = (ArrayLength) result;
+        assertEquals(NewArray.class, arrayLength.arrayId.getClass());
     }
 
     @Test()

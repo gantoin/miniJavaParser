@@ -345,10 +345,9 @@ Exp UnaryExpression() : {
         | <NOT> exp=Expression() { exp = new Not(exp); }
         | <L_PAREN> exp=Expression() <R_PAREN> {}
         | <THIS> { return new This(); }
-        | (
-        <NEW>
-            ( id=Identifier() <L_PAREN> <R_PAREN> ) { exp = new NewObject(id); }
-            | ( <INT> <L_BRACKET> exp=Expression() <R_BRACKET> ) { exp = new NewArray(exp); }
+        | <NEW> (
+            ( <INT> <L_BRACKET> exp=Expression() <R_BRACKET> ) { exp = new NewArray(exp); }
+            | ( id=Identifier() <L_PAREN> <R_PAREN> ) { exp = new NewObject(id); }
         )
         | idLexem=<IDENTIFIER_LITERAL> { exp =  new IdentifierExp(idLexem.toString()); }
         | exp=IntegerLiteral() { }
